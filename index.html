@@ -14,13 +14,24 @@
     <div id="root"></div>
     <script type="text/babel">
         const { useState, useEffect } = React;
+        
         const ManufacturerReport = () => {
             const [allData, setAllData] = useState([]);
             const [manufacturer, setManufacturer] = useState('Ferrari');
             const [availableMakes, setAvailableMakes] = useState([]);
-            const [displayData, setDisplayData] = useState({ q2: [], q3: [], comparison: [] });
+            const [displayData, setDisplayData] = useState({ q2: [], q3: [], q4: [], comparison: [] });
             const [loading, setLoading] = useState(true);
             const [error, setError] = useState(null);
+            
+            // Function to clean variant_id by removing GEN_UNKNOWN, GEN_OTHER, etc.
+            const cleanVariantId = (variantId) => {
+                if (!variantId) return '';
+                return variantId
+                    .replace(/\s+GEN_UNKNOWN/gi, '')
+                    .replace(/\s+GEN_OTHER/gi, '')
+                    .replace(/\s+GEN_[A-Z0-9_]+/gi, '')
+                    .trim();
+            };
             
             useEffect(() => { loadData(); }, []);
             
@@ -30,50 +41,359 @@
                     if (!response.ok) throw new Error('Failed to load data file');
                     const csvText = await response.text();
                     Papa.parse(csvText, {
-                        header: true, dynamicTyping: true, skipEmptyLines: true,
-                        complete: (results) => { processAllData(results.data); setLoading(false); },
-                        error: (err) => { setError(err.message); setLoading(false); }
+                        header: true, 
+                        dynamicTyping: true, 
+                        skipEmptyLines: true,
+                        complete: (results) => { 
+                            processAllData(results.data); 
+                            setLoading(false); 
+                        },
+                        error: (err) => { 
+                            setError(err.message); 
+                            setLoading(false); 
+                        }
                     });
-                } catch (err) { setError(err.message); setLoading(false); }
+                } catch (err) { 
+                    setError(err.message); 
+                    setLoading(false); 
+                }
             };
             
             const processAllData = (data) => {
                 setAllData(data);
                 const makes = new Set();
                 data.forEach(row => {
-                    if ((row.quarter === '2025Q2' || row.quarter === '2025Q3') && row.make) makes.add(row.make);
+                    if ((row.quarter === '2025Q2' || row.quarter === '2025Q3' || row.quarter === '2025Q4') && row.make) {
+                        makes.add(row.make);
+                    }
                 });
                 const sortedMakes = Array.from(makes).sort();
                 setAvailableMakes(sortedMakes);
-                if (sortedMakes.length > 0 && !sortedMakes.includes(manufacturer)) setManufacturer(sortedMakes[0]);
+                if (sortedMakes.length > 0 && !sortedMakes.includes(manufacturer)) {
+                    setManufacturer(sortedMakes[0]);
+                }
             };
             
-            useEffect(() => { if (allData.length > 0) processManufacturerData(manufacturer); }, [manufacturer, allData]);
+            useEffect(() => { 
+                if (allData.length > 0) processManufacturerData(manufacturer); 
+            }, [manufacturer, allData]);
             
             const processManufacturerData = (make) => {
                 if (!allData.length) return;
-                const q2Data = allData.filter(r => r.make === make && r.quarter === '2025Q2').sort((a, b) => b.MII_Index - a.MII_Index);
-                const q3Data = allData.filter(r => r.make === make && r.quarter === '2025Q3').sort((a, b) => b.MII_Index - a.MII_Index);
+                
+                const q2Data = allData
+                    .filter(r => r.make === make && r.quarter === '2025Q2')
+                    .sort((a, b) => b.MII_Index - a.MII_Index);
+                    
+                const q3Data = allData
+                    .filter(r => r.make === make && r.quarter === '2025Q3')
+                    .sort((a, b) => b.MII_Index - a.MII_Index);
+                    
+                const q4Data = allData
+                    .filter(r => r.make === make && r.quarter === '2025Q4')
+                    .sort((a, b) => b.MII_Index - a.MII_Index);
+                
                 const q2Map = {};
-                q2Data.forEach(f => { q2Map[f.model] = f; });
+                q2Data.forEach(f => { q2Map[f.variant_id] = f; });
+                
                 const comparison = [];
-                q3Data.forEach(f => {
-                    if (q2Map[f.model]) {
-                        const change = f.MII_Index - q2Map[f.model].MII_Index;
-                        comparison.push({ model: f.model, year: f.year, q2MII: q2Map[f.model].MII_Index, q3MII: f.MII_Index, change: change, pctChange: (change / q2Map[f.model].MII_Index) * 100 });
+                q4Data.forEach(f => {
+                    if (q2Map[f.variant_id]) {
+                        const change = f.MII_Index - q2Map[f.variant_id].MII_Index;
+                        comparison.push({ 
+                            variant_id: f.variant_id, 
+                            year: f.year, 
+                            q2MII: q2Map[f.variant_id].MII_Index, 
+                            q4MII: f.MII_Index, 
+                            change: change, 
+                            pctChange: (change / q2Map[f.variant_id].MII_Index) * 100 
+                        });
                     }
                 });
-                comparison.sort((a, b) => b.q3MII - a.q3MII);
-                setDisplayData({ q2: q2Data, q3: q3Data, comparison });
+                comparison.sort((a, b) => b.q4MII - a.q4MII);
+                
+                setDisplayData({ q2: q2Data, q3: q3Data, q4: q4Data, comparison });
             };
             
-            if (loading) return (<div className="flex items-center justify-center min-h-screen bg-gray-50"><div className="text-center"><div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600 mx-auto mb-4"></div><p className="text-xl font-semibold text-gray-700">Loading MII Data...</p></div></div>);
-            if (error) return (<div className="flex items-center justify-center min-h-screen bg-gray-50 p-6"><div className="bg-red-50 border border-red-200 rounded-lg p-8 max-w-md"><h2 className="text-xl font-bold text-red-800 mb-2">Error Loading Data</h2><p className="text-red-600">{error}</p><p className="text-sm text-gray-600 mt-4">Make sure mii_results_latest.csv is in the same directory</p></div></div>);
+            if (loading) {
+                return (
+                    <div className="flex items-center justify-center min-h-screen bg-gray-50">
+                        <div className="text-center">
+                            <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600 mx-auto mb-4"></div>
+                            <p className="text-xl font-semibold text-gray-700">Loading MII Data...</p>
+                        </div>
+                    </div>
+                );
+            }
             
-            const brandColor = manufacturer === 'Ferrari' ? 'red' : manufacturer === 'Porsche' ? 'yellow' : manufacturer === 'BMW' ? 'blue' : manufacturer === 'Mercedes-Benz' ? 'gray' : 'blue';
+            if (error) {
+                return (
+                    <div className="flex items-center justify-center min-h-screen bg-gray-50 p-6">
+                        <div className="bg-red-50 border border-red-200 rounded-lg p-8 max-w-md">
+                            <h2 className="text-xl font-bold text-red-800 mb-2">Error Loading Data</h2>
+                            <p className="text-red-600">{error}</p>
+                            <p className="text-sm text-gray-600 mt-4">Make sure data is accessible from S3</p>
+                        </div>
+                    </div>
+                );
+            }
             
-            return (<div className="w-full min-h-screen bg-gray-50 p-6"><div className="max-w-7xl mx-auto"><div className="mb-6"><h1 className="text-3xl font-bold mb-2">🏎️ Manufacturer Performance Report</h1><p className="text-gray-600">Q2 2025 vs Q3 2025 Market Interest Analysis</p><p className="text-xs text-gray-500 mt-1">{availableMakes.length} manufacturers available</p></div><div className="bg-white rounded-lg shadow-lg p-6 mb-6"><label className="block text-sm font-semibold mb-2">Select Manufacturer:</label><select value={manufacturer} onChange={(e) => setManufacturer(e.target.value)} className="w-full md:w-96 px-4 py-3 border-2 border-gray-300 rounded-lg text-lg font-semibold focus:border-blue-500 focus:outline-none">{availableMakes.map(make => (<option key={make} value={make}>{make}</option>))}</select></div>{displayData.q2.length === 0 && displayData.q3.length === 0 ? (<div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6"><p className="text-yellow-800">No data found for {manufacturer} in Q2 or Q3 2025.</p></div>) : (<><div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6"><div className="bg-white rounded-lg shadow-lg p-6"><h2 className={`text-xl font-bold mb-4 text-${brandColor}-600`}>Top 10 {manufacturer} - Q2 2025</h2>{displayData.q2.length === 0 ? (<p className="text-gray-500">No Q2 data available</p>) : (<div className="space-y-3">{displayData.q2.slice(0, 10).map((item, i) => (<div key={i} className={`border-l-4 border-${brandColor}-500 pl-3 py-2 hover:bg-gray-50`}><div className="flex justify-between items-start"><div><span className="font-bold text-gray-700">#{i + 1}</span><span className="ml-2 font-semibold">{item.model}</span>{item.year && <span className="ml-2 text-gray-500 text-sm">({item.year})</span>}</div><div className="text-right"><div className={`font-bold text-${brandColor}-600`}>{item.MII_Index.toFixed(2)}</div><div className="text-xs text-gray-500">Rank #{item.Quarter_Rank}</div></div></div><div className="text-xs text-gray-600 mt-1">{item.total_auctions} auction{item.total_auctions !== 1 ? 's' : ''} | {item.views_numeric?.toLocaleString()} views | {item.bids_numeric?.toFixed(0)} bids</div></div>))}</div>)}</div><div className="bg-white rounded-lg shadow-lg p-6"><h2 className={`text-xl font-bold mb-4 text-${brandColor}-600`}>Top 10 {manufacturer} - Q3 2025</h2>{displayData.q3.length === 0 ? (<p className="text-gray-500">No Q3 data available</p>) : (<div className="space-y-3">{displayData.q3.slice(0, 10).map((item, i) => (<div key={i} className={`border-l-4 border-${brandColor}-500 pl-3 py-2 hover:bg-gray-50`}><div className="flex justify-between items-start"><div><span className="font-bold text-gray-700">#{i + 1}</span><span className="ml-2 font-semibold">{item.model}</span>{item.year && <span className="ml-2 text-gray-500 text-sm">({item.year})</span>}</div><div className="text-right"><div className={`font-bold text-${brandColor}-600`}>{item.MII_Index.toFixed(2)}</div><div className="text-xs text-gray-500">Rank #{item.Quarter_Rank}</div></div></div><div className="text-xs text-gray-600 mt-1">{item.total_auctions} auction{item.total_auctions !== 1 ? 's' : ''} | {item.views_numeric?.toLocaleString()} views | {item.bids_numeric?.toFixed(0)} bids</div>{item.MII_Momentum && (<div className="text-xs mt-1"><span className={item.MII_Momentum > 0 ? 'text-green-600' : 'text-red-600'}>Momentum: {item.MII_Momentum > 0 ? '↑' : '↓'} {Math.abs(item.MII_Momentum).toFixed(2)}</span></div>)}</div>))}</div>)}</div></div>{displayData.comparison.length > 0 && (<div className="bg-white rounded-lg shadow-lg p-6"><h2 className={`text-xl font-bold mb-4 text-${brandColor}-600`}>Q2 → Q3 Comparison</h2><p className="text-sm text-gray-600 mb-4">Models appearing in both quarters ({displayData.comparison.length} total)</p><div className="overflow-x-auto"><table className="w-full text-sm"><thead><tr className="border-b-2 border-gray-300"><th className="text-left py-3 px-4">Model</th><th className="text-center py-3 px-4">Year</th><th className="text-right py-3 px-4">Q2 MII</th><th className="text-right py-3 px-4">Q3 MII</th><th className="text-right py-3 px-4">Change</th><th className="text-right py-3 px-4">% Change</th><th className="text-center py-3 px-4">Trend</th></tr></thead><tbody>{displayData.comparison.map((item, i) => (<tr key={i} className="border-b border-gray-200 hover:bg-gray-50"><td className="py-3 px-4 font-semibold">{item.model}</td><td className="py-3 px-4 text-center text-gray-600">{item.year || 'N/A'}</td><td className="py-3 px-4 text-right">{item.q2MII.toFixed(2)}</td><td className="py-3 px-4 text-right font-bold">{item.q3MII.toFixed(2)}</td><td className={`py-3 px-4 text-right font-semibold ${item.change >= 0 ? 'text-green-600' : 'text-red-600'}`}>{item.change >= 0 ? '+' : ''}{item.change.toFixed(2)}</td><td className={`py-3 px-4 text-right ${item.change >= 0 ? 'text-green-600' : 'text-red-600'}`}>{item.pctChange >= 0 ? '+' : ''}{item.pctChange.toFixed(1)}%</td><td className="py-3 px-4 text-center text-2xl">{item.change > 0 ? '📈' : item.change < 0 ? '📉' : '➡️'}</td></tr>))}</tbody></table></div></div>)}<div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-6"><div className="bg-white rounded-lg shadow p-4"><h3 className="text-sm font-semibold text-gray-600 mb-2">Q2 Models</h3><p className={`text-2xl font-bold text-${brandColor}-600`}>{displayData.q2.length}</p></div><div className="bg-white rounded-lg shadow p-4"><h3 className="text-sm font-semibold text-gray-600 mb-2">Q3 Models</h3><p className={`text-2xl font-bold text-${brandColor}-600`}>{displayData.q3.length}</p></div><div className="bg-white rounded-lg shadow p-4"><h3 className="text-sm font-semibold text-gray-600 mb-2">Top Q3 Model</h3><p className={`text-lg font-bold text-${brandColor}-600`}>{displayData.q3[0]?.model || 'N/A'}</p><p className="text-sm text-gray-500">{displayData.q3[0]?.MII_Index.toFixed(2)} MII</p></div><div className="bg-white rounded-lg shadow p-4"><h3 className="text-sm font-semibold text-gray-600 mb-2">Biggest Gainer</h3>{(() => { const sorted = [...displayData.comparison].sort((a, b) => b.change - a.change); return sorted[0] ? (<><p className="text-lg font-bold text-green-600">{sorted[0].model}</p><p className="text-sm text-gray-500">+{sorted[0].change.toFixed(2)}</p></>) : <p className="text-sm text-gray-500">N/A</p>; })()}</div></div></>)}</div></div>);
+            const brandColor = manufacturer === 'Ferrari' ? 'red' : 
+                              manufacturer === 'Porsche' ? 'yellow' : 
+                              manufacturer === 'BMW' ? 'blue' : 
+                              manufacturer === 'Mercedes-Benz' ? 'gray' : 'blue';
+            
+            return (
+                <div className="w-full min-h-screen bg-gray-50 p-6">
+                    <div className="max-w-7xl mx-auto">
+                        <div className="mb-6">
+                            <h1 className="text-3xl font-bold mb-2">🏎️ Manufacturer Performance Report</h1>
+                            <p className="text-gray-600">Q2 2025 vs Q3 2025 vs Q4 2025 Market Interest Analysis</p>
+                            <p className="text-xs text-gray-500 mt-1">{availableMakes.length} manufacturers available</p>
+                        </div>
+                        
+                        <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
+                            <label className="block text-sm font-semibold mb-2">Select Manufacturer:</label>
+                            <select 
+                                value={manufacturer} 
+                                onChange={(e) => setManufacturer(e.target.value)} 
+                                className="w-full md:w-96 px-4 py-3 border-2 border-gray-300 rounded-lg text-lg font-semibold focus:border-blue-500 focus:outline-none"
+                            >
+                                {availableMakes.map(make => (
+                                    <option key={make} value={make}>{make}</option>
+                                ))}
+                            </select>
+                        </div>
+                        
+                        {displayData.q4.length === 0 ? (
+                            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
+                                <p className="text-yellow-800">No data found for {manufacturer} in Q2/Q3/Q4 2025.</p>
+                            </div>
+                        ) : (
+                            <>
+                                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+                                    <div className="bg-white rounded-lg shadow-lg p-6">
+                                        <h2 className={`text-xl font-bold mb-4 text-${brandColor}-600`}>
+                                            Top 10 {manufacturer} - Q2 2025
+                                        </h2>
+                                        {displayData.q2.length === 0 ? (
+                                            <p className="text-gray-500">No Q2 data available</p>
+                                        ) : (
+                                            <div className="space-y-3">
+                                                {displayData.q2.slice(0, 10).map((item, i) => (
+                                                    <div key={i} className={`border-l-4 border-${brandColor}-500 pl-3 py-2 hover:bg-gray-50`}>
+                                                        <div className="flex justify-between items-start">
+                                                            <div>
+                                                                <span className="font-bold text-gray-700">#{i + 1}</span>
+                                                                <span className="ml-2 font-semibold text-sm">
+                                                                    {cleanVariantId(item.variant_id)}
+                                                                </span>
+                                                                {item.year && (
+                                                                    <span className="ml-2 text-gray-500 text-xs">({item.year})</span>
+                                                                )}
+                                                            </div>
+                                                            <div className="text-right">
+                                                                <div className={`font-bold text-${brandColor}-600`}>
+                                                                    {item.MII_Index.toFixed(2)}
+                                                                </div>
+                                                                <div className="text-xs text-gray-500">Rank #{item.Quarter_Rank}</div>
+                                                            </div>
+                                                        </div>
+                                                        <div className="text-xs text-gray-600 mt-1">
+                                                            {item.total_auctions} auction{item.total_auctions !== 1 ? 's' : ''} | {item.views_numeric?.toLocaleString()} views | {item.bids_numeric?.toFixed(0)} bids
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                    
+                                    <div className="bg-white rounded-lg shadow-lg p-6">
+                                        <h2 className={`text-xl font-bold mb-4 text-${brandColor}-600`}>
+                                            Top 10 {manufacturer} - Q3 2025
+                                        </h2>
+                                        {displayData.q3.length === 0 ? (
+                                            <p className="text-gray-500">No Q3 data available</p>
+                                        ) : (
+                                            <div className="space-y-3">
+                                                {displayData.q3.slice(0, 10).map((item, i) => (
+                                                    <div key={i} className={`border-l-4 border-${brandColor}-500 pl-3 py-2 hover:bg-gray-50`}>
+                                                        <div className="flex justify-between items-start">
+                                                            <div>
+                                                                <span className="font-bold text-gray-700">#{i + 1}</span>
+                                                                <span className="ml-2 font-semibold text-sm">
+                                                                    {cleanVariantId(item.variant_id)}
+                                                                </span>
+                                                                {item.year && (
+                                                                    <span className="ml-2 text-gray-500 text-xs">({item.year})</span>
+                                                                )}
+                                                            </div>
+                                                            <div className="text-right">
+                                                                <div className={`font-bold text-${brandColor}-600`}>
+                                                                    {item.MII_Index.toFixed(2)}
+                                                                </div>
+                                                                <div className="text-xs text-gray-500">Rank #{item.Quarter_Rank}</div>
+                                                            </div>
+                                                        </div>
+                                                        <div className="text-xs text-gray-600 mt-1">
+                                                            {item.total_auctions} auction{item.total_auctions !== 1 ? 's' : ''} | {item.views_numeric?.toLocaleString()} views | {item.bids_numeric?.toFixed(0)} bids
+                                                        </div>
+                                                        {item.MII_Momentum && (
+                                                            <div className="text-xs mt-1">
+                                                                <span className={item.MII_Momentum > 0 ? 'text-green-600' : 'text-red-600'}>
+                                                                    Momentum: {item.MII_Momentum > 0 ? '↑' : '↓'} {Math.abs(item.MII_Momentum).toFixed(2)}
+                                                                </span>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                    
+                                    <div className="bg-white rounded-lg shadow-lg p-6">
+                                        <h2 className={`text-xl font-bold mb-4 text-${brandColor}-600`}>
+                                            Top 10 {manufacturer} - Q4 2025
+                                        </h2>
+                                        {displayData.q4.length === 0 ? (
+                                            <p className="text-gray-500">No Q4 data available</p>
+                                        ) : (
+                                            <div className="space-y-3">
+                                                {displayData.q4.slice(0, 10).map((item, i) => (
+                                                    <div key={i} className={`border-l-4 border-${brandColor}-500 pl-3 py-2 hover:bg-gray-50`}>
+                                                        <div className="flex justify-between items-start">
+                                                            <div>
+                                                                <span className="font-bold text-gray-700">#{i + 1}</span>
+                                                                <span className="ml-2 font-semibold text-sm">
+                                                                    {cleanVariantId(item.variant_id)}
+                                                                </span>
+                                                                {item.year && (
+                                                                    <span className="ml-2 text-gray-500 text-xs">({item.year})</span>
+                                                                )}
+                                                            </div>
+                                                            <div className="text-right">
+                                                                <div className={`font-bold text-${brandColor}-600`}>
+                                                                    {item.MII_Index.toFixed(2)}
+                                                                </div>
+                                                                <div className="text-xs text-gray-500">Rank #{item.Quarter_Rank}</div>
+                                                            </div>
+                                                        </div>
+                                                        <div className="text-xs text-gray-600 mt-1">
+                                                            {item.total_auctions} auction{item.total_auctions !== 1 ? 's' : ''} | {item.views_numeric?.toLocaleString()} views | {item.bids_numeric?.toFixed(0)} bids
+                                                        </div>
+                                                        {item.MII_Momentum && (
+                                                            <div className="text-xs mt-1">
+                                                                <span className={item.MII_Momentum > 0 ? 'text-green-600' : 'text-red-600'}>
+                                                                    Momentum: {item.MII_Momentum > 0 ? '↑' : '↓'} {Math.abs(item.MII_Momentum).toFixed(2)}
+                                                                </span>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                                
+                                {displayData.comparison.length > 0 && (
+                                    <div className="bg-white rounded-lg shadow-lg p-6">
+                                        <h2 className={`text-xl font-bold mb-4 text-${brandColor}-600`}>
+                                            Q2 → Q4 Comparison
+                                        </h2>
+                                        <p className="text-sm text-gray-600 mb-4">
+                                            Models appearing in both quarters ({displayData.comparison.length} total)
+                                        </p>
+                                        <div className="overflow-x-auto">
+                                            <table className="w-full text-sm">
+                                                <thead>
+                                                    <tr className="border-b-2 border-gray-300">
+                                                        <th className="text-left py-3 px-4">Model</th>
+                                                        <th className="text-center py-3 px-4">Year</th>
+                                                        <th className="text-right py-3 px-4">Q2 MII</th>
+                                                        <th className="text-right py-3 px-4">Q4 MII</th>
+                                                        <th className="text-right py-3 px-4">Change</th>
+                                                        <th className="text-right py-3 px-4">% Change</th>
+                                                        <th className="text-center py-3 px-4">Trend</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {displayData.comparison.map((item, i) => (
+                                                        <tr key={i} className="border-b border-gray-200 hover:bg-gray-50">
+                                                            <td className="py-3 px-4 font-semibold text-sm">
+                                                                {cleanVariantId(item.variant_id)}
+                                                            </td>
+                                                            <td className="py-3 px-4 text-center text-gray-600">
+                                                                {item.year || 'N/A'}
+                                                            </td>
+                                                            <td className="py-3 px-4 text-right">
+                                                                {item.q2MII.toFixed(2)}
+                                                            </td>
+                                                            <td className="py-3 px-4 text-right font-bold">
+                                                                {item.q4MII.toFixed(2)}
+                                                            </td>
+                                                            <td className={`py-3 px-4 text-right font-semibold ${item.change >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                                                {item.change >= 0 ? '+' : ''}{item.change.toFixed(2)}
+                                                            </td>
+                                                            <td className={`py-3 px-4 text-right ${item.change >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                                                {item.pctChange >= 0 ? '+' : ''}{item.pctChange.toFixed(1)}%
+                                                            </td>
+                                                            <td className="py-3 px-4 text-center text-2xl">
+                                                                {item.change > 0 ? '📈' : item.change < 0 ? '📉' : '➡️'}
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                )}
+                                
+                                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-6">
+                                    <div className="bg-white rounded-lg shadow p-4">
+                                        <h3 className="text-sm font-semibold text-gray-600 mb-2">Q4 Models</h3>
+                                        <p className={`text-2xl font-bold text-${brandColor}-600`}>
+                                            {displayData.q4.length}
+                                        </p>
+                                    </div>
+                                    <div className="bg-white rounded-lg shadow p-4">
+                                        <h3 className="text-sm font-semibold text-gray-600 mb-2">Q3 Models</h3>
+                                        <p className={`text-2xl font-bold text-${brandColor}-600`}>
+                                            {displayData.q3.length}
+                                        </p>
+                                    </div>
+                                    <div className="bg-white rounded-lg shadow p-4">
+                                        <h3 className="text-sm font-semibold text-gray-600 mb-2">Top Q4 Model</h3>
+                                        <p className={`text-sm font-bold text-${brandColor}-600`}>
+                                            {cleanVariantId(displayData.q4[0]?.variant_id) || 'N/A'}
+                                        </p>
+                                        <p className="text-sm text-gray-500">
+                                            {displayData.q4[0]?.MII_Index.toFixed(2)} MII
+                                        </p>
+                                    </div>
+                                    <div className="bg-white rounded-lg shadow p-4">
+                                        <h3 className="text-sm font-semibold text-gray-600 mb-2">Biggest Gainer</h3>
+                                        {(() => { 
+                                            const sorted = [...displayData.comparison].sort((a, b) => b.change - a.change); 
+                                            return sorted[0] ? (
+                                                <>
+                                                    <p className="text-sm font-bold text-green-600">
+                                                        {cleanVariantId(sorted[0].variant_id)}
+                                                    </p>
+                                                    <p className="text-sm text-gray-500">
+                                                        +{sorted[0].change.toFixed(2)}
+                                                    </p>
+                                                </>
+                                            ) : <p className="text-sm text-gray-500">N/A</p>; 
+                                        })()}
+                                    </div>
+                                </div>
+                            </>
+                        )}
+                    </div>
+                </div>
+            );
         };
+        
         ReactDOM.render(<ManufacturerReport />, document.getElementById('root'));
     </script>
 </body>
