@@ -81,7 +81,7 @@
                 <div class="flex items-center gap-6">
                     <div class="text-right">
                         <div class="text-xs text-zinc-500">Data Sources</div>
-                        <div class="text-sm font-medium text-zinc-300">BAT + Cars & Bids</div>
+                        <div class="text-sm font-medium text-zinc-300" id="dataSources">BAT + Cars & Bids</div>
                     </div>
                     <div class="text-right">
                         <div class="text-xs text-zinc-500">Last Updated</div>
@@ -295,6 +295,28 @@
         // UTILITY FUNCTIONS
         // ==========================================
         
+        // Map a raw CSV row (manufacturer/model/mii_score/...) to the field
+        // names the rest of the UI expects (make/variant_id/MII_Index/...).
+        // Tolerant of both schemas so old and new exports both render.
+        function normalizeRow(row) {
+            const pick = (...keys) => {
+                for (const k of keys) {
+                    if (row[k] !== undefined && row[k] !== null && row[k] !== '') return row[k];
+                }
+                return undefined;
+            };
+            return {
+                ...row,
+                make: pick('make', 'manufacturer'),
+                variant_id: pick('variant_id', 'model'),
+                MII_Index: pick('MII_Index', 'mii_score'),
+                total_auctions: pick('total_auctions', 'auction_count'),
+                views_numeric: pick('views_numeric', 'views'),
+                data_source: pick('data_source'),
+                quarter: pick('quarter'),
+            };
+        }
+
         // Clean variant_id by removing GEN_UNKNOWN, GEN_OTHER, etc. (from your original code)
         function cleanVariantId(variantId) {
             if (!variantId) return '';
@@ -355,8 +377,12 @@
                     dynamicTyping: true,
                     skipEmptyLines: true,
                     complete: (results) => {
-                        // Filter to rows with make and MII_Index (your column names)
-                        allData = results.data.filter(row => row.make && row.MII_Index);
+                        // Map the index CSV schema -> the field names this UI uses.
+                        // The source CSV uses manufacturer/model/mii_score/auction_count/views,
+                        // while the render code expects make/variant_id/MII_Index/etc.
+                        allData = results.data
+                            .map(normalizeRow)
+                            .filter(row => row.make && row.MII_Index);
                         console.log('Loaded', allData.length, 'rows');
                         
                         // Find available quarters
@@ -373,6 +399,12 @@
                             `<option value="${q}">${q}</option>`
                         ).join('');
                         
+                        // Reflect the data sources actually present in the file.
+                        const sources = [...new Set(allData.map(r => r.data_source).filter(Boolean))];
+                        if (sources.length) {
+                            document.getElementById('dataSources').textContent = sources.join(' + ');
+                        }
+
                         // Hide loading
                         document.getElementById('loading').style.display = 'none';
                         document.getElementById('lastUpdated').textContent = new Date().toLocaleDateString();
