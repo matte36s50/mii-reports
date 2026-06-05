@@ -1,13 +1,18 @@
 # DuPont Registry → MII Scraper
 
-Scrapes **sold** auction listings from DuPont Registry Live and folds them into
+Pulls **sold** auction listings from DuPont Registry Live and folds them into
 the Market Interest Index (the CSV the dashboard reads), tagged as
 `data_source = "DuPont Registry"`.
 
+DuPont Registry Live is a Next.js site that server-side renders every listing
+into a `<script id="__NEXT_DATA__">` JSON blob, and the **sold-listings pages
+are public** — so this is a plain HTTP fetch + JSON parse. No browser, no
+login, no credentials.
+
 ```
 scraper/
-├── config.py            # all settings + MII formula weights (reads .env)
-├── dupont_scraper.py    # Playwright login + listing capture  -> data/raw/*.json
+├── config.py            # settings + MII formula weights
+├── dupont_scraper.py    # fetch pages, parse __NEXT_DATA__  -> data/raw/*.json
 ├── mii_transform.py     # raw listings -> MII schema + mii_score
 ├── merge_to_index.py    # fetch live index, score, write combined CSV
 └── run.py               # scrape + merge in one shot
@@ -15,27 +20,20 @@ scraper/
 
 ## Setup (one command)
 
-From the repo root:
-
 ```bash
-bash scraper/setup.sh        # installs deps + Chromium, creates .env
+bash scraper/setup.sh        # installs the two Python deps
 ```
-
-Then edit `scraper/.env` with your DuPont login. `.env` is gitignored —
-credentials are **never** committed.
 
 ## Run
 
 ```bash
-python3 scraper/run.py              # scrape sold listings + merge into the index
+python3 scraper/run.py              # scrape all sold listings + merge into the index
 python3 scraper/run.py --merge-only # re-merge the most recent scrape (no re-scrape)
 ```
 
-Output: `data/output/mii_results_latest.csv`.
+Output: `data/output/mii_results_latest.csv` (~338 DuPont rows merged in).
 
 ## See the results in the dashboard
-
-Preview the merged data locally before uploading anywhere:
 
 ```bash
 python3 -m http.server 8000
@@ -48,25 +46,22 @@ When it looks right, upload the file to S3 as
 step **never** writes to S3 — uploading is a deliberate manual step so a bad
 scrape can't clobber the live dashboard.
 
-## How scoring works
+## How scoring works (and an important caveat)
 
 DuPont rows are scored with the published MII methodology
 (`config.MII_WEIGHTS`: price 30%, bids 30%, views 20%, comments 12%,
-social 5%, age 3%). Each signal is normalised against the **existing** index so
-DuPont rows land on the same 0–100 scale as the Bring a Trailer rows. Signals
-DuPont doesn't expose (e.g. views/comments) fall back to the dataset median and
-are flagged via the `*_source = "estimate"` columns.
+social 5%, age 3%), normalised against the existing index so they share the
+same 0–100 scale.
 
-## ⚠️ Two things before the first real run
+**Caveat:** the DuPont feed only exposes **final sale price** (and year). It has
+no view, comment, or bid-count signals. Those (67% of the weight) fall back to
+the index median, so DuPont `mii_score`s mostly track price and cluster fairly
+tightly. They're directionally right and comparable, but if you want DuPont rows
+to spread out more, consider a price-weighted sub-score — see `mii_transform.py`.
 
-1. **Network allowlist.** This repo's cloud environment blocks
-   `live.dupontregistry.com` (`x-deny-reason: host_not_allowed`). Add the host
-   to the environment's network policy
-   (https://code.claude.com/docs/en/claude-code-on-the-web) before running here,
-   or run the scraper locally where there's no egress restriction.
+## Running in the cloud environment
 
-2. **Selectors are first-pass.** `LOGIN_SELECTORS` / `CARD_SELECTORS` and the
-   API field guesses in `dupont_scraper.py` are written against the *expected*
-   markup. The first run saves the rendered HTML + a screenshot to `data/raw/`
-   so the exact login fields and listing API/DOM can be confirmed and the
-   selectors finalised.
+If you run this inside Claude Code on the web rather than locally, allowlist
+`live.dupontregistry.com` in the environment's network policy
+(https://code.claude.com/docs/en/claude-code-on-the-web). No browser-download
+host is needed since this is a pure HTTP fetch.

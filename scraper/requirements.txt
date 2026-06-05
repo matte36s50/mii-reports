@@ -1,5 +1,4 @@
 # DuPont Registry -> MII scraper pipeline
-playwright==1.49.1
-python-dotenv==1.0.1
-pandas==2.2.3
+# Sold listings are public + server-rendered, so a plain HTTP fetch is enough:
 requests==2.32.3
+pandas==2.2.3
