@@ -13,28 +13,40 @@ scraper/
 └── run.py               # scrape + merge in one shot
 ```
 
-## Setup
+## Setup (one command)
+
+From the repo root:
 
 ```bash
-cd scraper
-python3 -m pip install -r requirements.txt
-python3 -m playwright install chromium
-
-cp .env.example .env        # then edit .env with your DuPont login
+bash scraper/setup.sh        # installs deps + Chromium, creates .env
 ```
 
-`.env` is gitignored — credentials are **never** committed.
+Then edit `scraper/.env` with your DuPont login. `.env` is gitignored —
+credentials are **never** committed.
 
 ## Run
 
 ```bash
-python3 run.py              # scrape sold listings + merge into the index
-python3 run.py --merge-only # re-merge the most recent scrape (no re-scrape)
+python3 scraper/run.py              # scrape sold listings + merge into the index
+python3 scraper/run.py --merge-only # re-merge the most recent scrape (no re-scrape)
 ```
 
-Output: `data/output/mii_results_latest.csv`. Review it, then upload it to S3 as
-`reports/mii_results_latest.csv` (the dashboard's data source). The merge step
-**does not** touch S3 — uploading is a deliberate manual step.
+Output: `data/output/mii_results_latest.csv`.
+
+## See the results in the dashboard
+
+Preview the merged data locally before uploading anywhere:
+
+```bash
+python3 -m http.server 8000
+# then open:
+#   http://localhost:8000/index.html?data=data/output/mii_results_latest.csv
+```
+
+When it looks right, upload the file to S3 as
+`reports/mii_results_latest.csv` (the dashboard's live data source). The merge
+step **never** writes to S3 — uploading is a deliberate manual step so a bad
+scrape can't clobber the live dashboard.
 
 ## How scoring works
 

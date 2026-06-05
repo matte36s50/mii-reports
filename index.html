@@ -277,7 +277,10 @@
         // CONFIGURATION
         // ==========================================
         const CONFIG = {
-            dataUrl: 'https://my-mii-reports.s3.amazonaws.com/reports/mii_results_latest.csv',
+            // Append ?data=<path-or-url> to preview a local/merged CSV without
+            // touching S3, e.g. index.html?data=data/output/mii_results_latest.csv
+            dataUrl: new URLSearchParams(location.search).get('data')
+                || 'https://my-mii-reports.s3.amazonaws.com/reports/mii_results_latest.csv',
             fallbackUrl: 'mii_results_latest.csv'
         };
 
