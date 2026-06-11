@@ -95,6 +95,17 @@
     </header>
 
     <main class="max-w-7xl mx-auto px-6 py-8">
+        <!-- Tab Navigation -->
+        <div class="flex items-center gap-2 mb-8">
+            <button id="tabBtnLeaderboard" class="px-5 py-2.5 rounded-lg text-sm font-semibold transition-colors bg-amber-600 text-white shadow-lg shadow-amber-500/20">
+                Leaderboard
+            </button>
+            <button id="tabBtnAnalytics" class="px-5 py-2.5 rounded-lg text-sm font-semibold transition-colors bg-zinc-800 text-zinc-400 hover:bg-zinc-700">
+                Analytics
+            </button>
+        </div>
+
+        <div id="tab-leaderboard">
         <!-- Market Overview Cards -->
         <div class="grid grid-cols-4 gap-4 mb-8">
             <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-5 fade-in">
@@ -224,6 +235,108 @@
                 </div>
             </div>
         </div>
+        </div>
+
+        <!-- Analytics Tab -->
+        <div id="tab-analytics" class="hidden">
+            <!-- Base Model Picker -->
+            <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-5 mb-6">
+                <div class="flex items-center justify-between gap-4 flex-wrap">
+                    <div>
+                        <h2 class="font-semibold">Model Comparison</h2>
+                        <p class="text-xs text-zinc-500 mt-1">Pick a base model, then add suggested look-alikes or any models you choose</p>
+                    </div>
+                    <div class="relative">
+                        <input
+                            type="text"
+                            id="baseModelSearch"
+                            placeholder="Search for a base model (e.g. 911 Carrera)..."
+                            autocomplete="off"
+                            class="bg-zinc-800 border border-zinc-700 rounded-lg pl-10 pr-4 py-2 text-sm w-96 focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500"
+                        >
+                        <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                        <div id="baseModelResults" class="hidden absolute right-0 mt-2 w-96 max-h-72 overflow-y-auto bg-zinc-800 border border-zinc-700 rounded-lg shadow-xl z-30"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Empty State -->
+            <div id="analyticsEmpty" class="bg-zinc-900 border border-zinc-800 rounded-xl p-12 text-center">
+                <div class="text-4xl mb-4">📊</div>
+                <h3 class="font-semibold text-zinc-300">Choose a base model to start comparing</h3>
+                <p class="text-sm text-zinc-500 mt-2 max-w-md mx-auto">
+                    Search above or click a model in the Leaderboard tab. We'll suggest models with a
+                    similar MII profile, and you can add any others you want to compare side by side.
+                </p>
+            </div>
+
+            <!-- Comparison Content -->
+            <div id="analyticsContent" class="hidden grid grid-cols-3 gap-6">
+                <div class="col-span-2 space-y-6">
+                    <!-- MII Profile Radar -->
+                    <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-5">
+                        <h3 class="font-semibold">MII Profile</h3>
+                        <p class="text-xs text-zinc-500 mt-1 mb-4">
+                            Normalized auction metrics that feed the MII formula • <span id="radarQuarterLabel"></span>
+                        </p>
+                        <div class="flex items-start gap-6 flex-wrap">
+                            <div id="radarChart" class="flex-shrink-0"></div>
+                            <div id="radarLegend" class="space-y-2 pt-4 min-w-0"></div>
+                        </div>
+                    </div>
+
+                    <!-- Head-to-Head Table -->
+                    <div class="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">
+                        <div class="border-b border-zinc-800 px-5 py-4">
+                            <h3 class="font-semibold">Head-to-Head Metrics</h3>
+                            <p class="text-xs text-zinc-500 mt-1">Profile match is measured against the base model</p>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <div id="comparisonTable"></div>
+                        </div>
+                    </div>
+
+                    <!-- MII Trend -->
+                    <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-5">
+                        <h3 class="font-semibold mb-1">MII Trend</h3>
+                        <p class="text-xs text-zinc-500 mb-4">MII score across reporting periods</p>
+                        <div id="trendChart"></div>
+                    </div>
+                </div>
+
+                <div class="space-y-6">
+                    <!-- Models In Comparison -->
+                    <div class="bg-zinc-900 border border-amber-900/50 rounded-xl p-5">
+                        <div class="flex items-center justify-between mb-3">
+                            <h3 class="font-semibold">Comparing (<span id="modelCompareCount">1</span>/6)</h3>
+                            <button id="clearModelCompareBtn" class="text-xs text-zinc-500 hover:text-zinc-300">Clear added</button>
+                        </div>
+                        <div id="comparisonModelList" class="space-y-2 mb-4"></div>
+                        <div class="relative">
+                            <input
+                                type="text"
+                                id="addModelSearch"
+                                placeholder="Add a model you choose..."
+                                autocomplete="off"
+                                class="bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm w-full focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500"
+                            >
+                            <div id="addModelResults" class="hidden absolute left-0 right-0 mt-2 max-h-60 overflow-y-auto bg-zinc-800 border border-zinc-700 rounded-lg shadow-xl z-30"></div>
+                        </div>
+                    </div>
+
+                    <!-- Similar MII Profiles -->
+                    <div class="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">
+                        <div class="border-b border-zinc-800 px-5 py-4">
+                            <h3 class="font-semibold">✨ Similar MII Profiles</h3>
+                            <p class="text-xs text-zinc-500 mt-1">Closest matches to <span id="similarBaseName" class="text-zinc-300">your base model</span></p>
+                        </div>
+                        <div id="similarList" class="divide-y divide-zinc-800/50"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
 
         <!-- MII Methodology Footer -->
         <div class="mt-12 bg-zinc-900/50 border border-zinc-800 rounded-xl p-6">
@@ -291,14 +404,31 @@
         let sortOrder = 'desc';
         let compareList = [];
 
+        // Analytics tab state
+        let activeTab = 'leaderboard';
+        let modelIndex = new Map();
+        let baseModelKey = null;
+        let comparedModelKeys = [];
+        const MAX_COMPARED_MODELS = 6;
+        const MODEL_COLORS = ['#f59e0b', '#38bdf8', '#34d399', '#a78bfa', '#fb7185', '#a3e635'];
+        // Same dimensions and weights as the MII formula itself
+        const PROFILE_FEATURES = [
+            { key: 'price_normalized', label: 'Price', weight: 0.30 },
+            { key: 'bids_normalized', label: 'Bids', weight: 0.30 },
+            { key: 'views_normalized', label: 'Views', weight: 0.20 },
+            { key: 'comments_normalized', label: 'Comments', weight: 0.12 },
+            { key: 'social_score_normalized', label: 'Social', weight: 0.05 },
+            { key: 'age_normalized', label: 'Age', weight: 0.03 }
+        ];
+
         // ==========================================
         // UTILITY FUNCTIONS
         // ==========================================
         
         // Clean variant_id by removing GEN_UNKNOWN, GEN_OTHER, etc. (from your original code)
         function cleanVariantId(variantId) {
-            if (!variantId) return '';
-            return variantId
+            if (variantId == null || variantId === '') return '';
+            return String(variantId)
                 .replace(/\s+GEN_UNKNOWN/gi, '')
                 .replace(/\s+GEN_OTHER/gi, '')
                 .replace(/\s+GEN_[A-Z0-9_]+/gi, '')
@@ -337,6 +467,27 @@
             return Math.round(num).toLocaleString();
         }
 
+        function escapeAttr(text) {
+            return escapeHtml(text).replace(/"/g, '&quot;');
+        }
+
+        function clamp01(v) {
+            return Math.max(0, Math.min(1, v));
+        }
+
+        // Accept both the legacy schema (make/variant_id/MII_Index) and the
+        // current report schema (manufacturer/model/mii_score)
+        function normalizeRow(row) {
+            row.make = row.make || row.manufacturer;
+            // Coerce to string: dynamicTyping turns purely numeric model names into numbers
+            const variant = row.variant_id ?? row.model;
+            row.variant_id = variant == null ? '' : String(variant);
+            if (row.MII_Index == null) row.MII_Index = row.mii_score;
+            if (row.total_auctions == null) row.total_auctions = row.auction_count || 1;
+            if (row.views_numeric == null) row.views_numeric = row.views || 0;
+            return row;
+        }
+
         // ==========================================
         // DATA LOADING
         // ==========================================
@@ -355,9 +506,10 @@
                     dynamicTyping: true,
                     skipEmptyLines: true,
                     complete: (results) => {
-                        // Filter to rows with make and MII_Index (your column names)
-                        allData = results.data.filter(row => row.make && row.MII_Index);
+                        // Normalize column names, then keep rows with a make and an MII score
+                        allData = results.data.map(normalizeRow).filter(row => row.make && row.MII_Index != null);
                         console.log('Loaded', allData.length, 'rows');
+                        buildModelIndex();
                         
                         // Find available quarters
                         const quarters = new Set();
@@ -581,7 +733,9 @@
                 
                 <div class="space-y-2 max-h-80 overflow-y-auto">
                     ${models.slice(0, 15).map((model, idx) => `
-                        <div class="flex items-center justify-between py-2 px-2 rounded hover:bg-zinc-800/30 transition-colors">
+                        <div class="flex items-center justify-between py-2 px-2 rounded hover:bg-zinc-800/30 transition-colors cursor-pointer"
+                             data-model-action="setBase" data-key="${escapeAttr(modelKey(model.make, model.variant_id))}"
+                             title="Compare this model in the Analytics tab">
                             <div class="flex items-center gap-3 min-w-0 flex-1">
                                 <span class="w-6 text-center text-sm font-medium text-zinc-500">
                                     ${idx + 1}
@@ -651,7 +805,9 @@
                 .slice(0, 8);
 
             container.innerHTML = topModels.map(m => `
-                <div class="px-5 py-3 hover:bg-zinc-800/30 transition-colors">
+                <div class="px-5 py-3 hover:bg-zinc-800/30 transition-colors cursor-pointer"
+                     data-model-action="setBase" data-key="${escapeAttr(modelKey(m.make, m.variant_id))}"
+                     title="Compare this model in the Analytics tab">
                     <div class="flex items-center justify-between">
                         <div class="min-w-0 flex-1">
                             <div class="font-medium text-sm truncate">${escapeHtml(cleanVariantId(m.variant_id))}</div>
@@ -694,6 +850,340 @@
                     <button onclick="toggleCompare('${escapeHtml(make)}')" class="text-zinc-500 hover:text-zinc-300">×</button>
                 </span>
             `).join('');
+        }
+
+        // ==========================================
+        // ANALYTICS TAB (model comparison)
+        // ==========================================
+        function modelKey(make, model) {
+            return make + '|||' + model;
+        }
+
+        function buildModelIndex() {
+            modelIndex = new Map();
+            allData.forEach(row => {
+                const key = modelKey(row.make, row.variant_id);
+                if (!modelIndex.has(key)) {
+                    modelIndex.set(key, { key, make: row.make, model: row.variant_id, rows: [] });
+                }
+                modelIndex.get(key).rows.push(row);
+            });
+            modelIndex.forEach(entry => {
+                entry.rows.sort((a, b) => String(a.quarter).localeCompare(String(b.quarter)));
+            });
+        }
+
+        // Row for the selected quarter, falling back to the model's most recent data
+        function getRowForQuarter(entry) {
+            return entry.rows.find(r => r.quarter === currentQuarter) || entry.rows[entry.rows.length - 1];
+        }
+
+        // Similarity between two models' MII profiles: weighted distance over the
+        // normalized inputs of the MII formula, mapped to 0..1 (1 = identical profile)
+        function profileSimilarity(rowA, rowB) {
+            let sum = 0, sumWeight = 0, used = 0;
+            for (const f of PROFILE_FEATURES) {
+                const a = rowA[f.key], b = rowB[f.key];
+                if (typeof a === 'number' && typeof b === 'number') {
+                    sum += f.weight * Math.pow(clamp01(a) - clamp01(b), 2);
+                    sumWeight += f.weight;
+                    used++;
+                }
+            }
+            if (used < 3 || sumWeight === 0) {
+                // Not enough profile data — fall back to MII score proximity
+                return Math.max(0, 1 - Math.abs((rowA.MII_Index || 0) - (rowB.MII_Index || 0)) / 100);
+            }
+            return Math.max(0, 1 - Math.sqrt(sum / sumWeight));
+        }
+
+        function setActiveTab(tab) {
+            activeTab = tab;
+            document.getElementById('tab-leaderboard').classList.toggle('hidden', tab !== 'leaderboard');
+            document.getElementById('tab-analytics').classList.toggle('hidden', tab !== 'analytics');
+            const activeClasses = ['bg-amber-600', 'text-white', 'shadow-lg', 'shadow-amber-500/20'];
+            const inactiveClasses = ['bg-zinc-800', 'text-zinc-400', 'hover:bg-zinc-700'];
+            const btns = {
+                leaderboard: document.getElementById('tabBtnLeaderboard'),
+                analytics: document.getElementById('tabBtnAnalytics')
+            };
+            Object.entries(btns).forEach(([name, btn]) => {
+                btn.classList.remove(...activeClasses, ...inactiveClasses);
+                btn.classList.add(...(name === tab ? activeClasses : inactiveClasses));
+            });
+        }
+
+        function setBaseModel(key) {
+            baseModelKey = key;
+            comparedModelKeys = comparedModelKeys.filter(k => k !== key);
+            setActiveTab('analytics');
+            renderAnalytics();
+        }
+
+        function addComparedModel(key) {
+            if (key === baseModelKey || comparedModelKeys.includes(key)) return;
+            if (1 + comparedModelKeys.length >= MAX_COMPARED_MODELS) return;
+            comparedModelKeys.push(key);
+            renderAnalytics();
+        }
+
+        function removeComparedModel(key) {
+            comparedModelKeys = comparedModelKeys.filter(k => k !== key);
+            renderAnalytics();
+        }
+
+        function renderAnalytics() {
+            const empty = document.getElementById('analyticsEmpty');
+            const content = document.getElementById('analyticsContent');
+
+            if (!baseModelKey || !modelIndex.has(baseModelKey)) {
+                empty.classList.remove('hidden');
+                content.classList.add('hidden');
+                return;
+            }
+            empty.classList.add('hidden');
+            content.classList.remove('hidden');
+
+            const keys = [baseModelKey, ...comparedModelKeys].filter(k => modelIndex.has(k));
+            const entries = keys.map((key, i) => {
+                const entry = modelIndex.get(key);
+                return {
+                    ...entry,
+                    row: getRowForQuarter(entry),
+                    color: MODEL_COLORS[i % MODEL_COLORS.length],
+                    isBase: i === 0
+                };
+            });
+
+            document.getElementById('modelCompareCount').textContent = entries.length;
+            document.getElementById('similarBaseName').textContent = cleanVariantId(entries[0].model);
+            document.getElementById('radarQuarterLabel').textContent =
+                `${currentQuarter} (models without data this period show their latest)`;
+
+            renderComparisonModelList(entries);
+            renderRadar(entries);
+            renderComparisonTable(entries);
+            renderTrendChart(entries);
+            renderSimilarList(entries[0], keys);
+        }
+
+        function renderComparisonModelList(entries) {
+            document.getElementById('comparisonModelList').innerHTML = entries.map(e => `
+                <div class="flex items-center justify-between gap-2 bg-zinc-800/60 rounded-lg px-3 py-2">
+                    <div class="flex items-center gap-2.5 min-w-0">
+                        <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" style="background:${e.color}"></span>
+                        <div class="min-w-0">
+                            <div class="text-sm font-medium truncate">${escapeHtml(cleanVariantId(e.model))}</div>
+                            <div class="text-xs text-zinc-500">${escapeHtml(e.make)}${e.isBase ? ' • <span class="text-amber-500">base model</span>' : ''}</div>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2 flex-shrink-0">
+                        <span class="font-bold text-amber-500 text-sm">${e.row.MII_Index != null ? e.row.MII_Index.toFixed(1) : '--'}</span>
+                        ${e.isBase ? '' : `
+                            <button data-model-action="remove" data-key="${escapeAttr(e.key)}"
+                                class="w-6 h-6 rounded flex items-center justify-center text-zinc-500 hover:text-zinc-200 hover:bg-zinc-700">×</button>
+                        `}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderSimilarList(base, currentKeys) {
+            const container = document.getElementById('similarList');
+            const results = [];
+            modelIndex.forEach(entry => {
+                if (entry.key === base.key) return;
+                const row = getRowForQuarter(entry);
+                if (!row || row.MII_Index == null) return;
+                results.push({ entry, row, sim: profileSimilarity(base.row, row) });
+            });
+            results.sort((a, b) => b.sim - a.sim);
+            const top = results.slice(0, 6);
+
+            if (top.length === 0) {
+                container.innerHTML = '<div class="px-5 py-6 text-center text-sm text-zinc-500">No similar models found</div>';
+                return;
+            }
+
+            container.innerHTML = top.map(r => {
+                const added = currentKeys.includes(r.entry.key);
+                return `
+                    <div class="px-5 py-3 hover:bg-zinc-800/30 transition-colors">
+                        <div class="flex items-center justify-between gap-3">
+                            <div class="min-w-0 flex-1">
+                                <div class="font-medium text-sm truncate">${escapeHtml(cleanVariantId(r.entry.model))}</div>
+                                <div class="text-xs text-zinc-500">${escapeHtml(r.entry.make)} • MII ${r.row.MII_Index.toFixed(1)}</div>
+                            </div>
+                            <div class="text-right flex-shrink-0">
+                                <div class="text-sm font-bold text-emerald-400">${Math.round(r.sim * 100)}%</div>
+                                <div class="text-[10px] text-zinc-500 uppercase tracking-wider">match</div>
+                            </div>
+                            <button data-model-action="${added ? 'remove' : 'add'}" data-key="${escapeAttr(r.entry.key)}"
+                                class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-all ${
+                                    added ? 'bg-amber-600 text-white' : 'bg-zinc-800 text-zinc-500 hover:bg-zinc-700'
+                                }">
+                                ${added ? '✓' : '+'}
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderRadar(entries) {
+            const cx = 150, cy = 132, r = 92;
+            const n = PROFILE_FEATURES.length;
+            const angle = i => -Math.PI / 2 + (i * 2 * Math.PI) / n;
+            const pt = (i, v) => [cx + Math.cos(angle(i)) * r * v, cy + Math.sin(angle(i)) * r * v];
+            const pts = (level, vals) => PROFILE_FEATURES
+                .map((_, i) => pt(i, vals ? vals[i] : level).map(c => c.toFixed(1)).join(','))
+                .join(' ');
+
+            const rings = [0.25, 0.5, 0.75, 1].map(level =>
+                `<polygon points="${pts(level)}" fill="none" stroke="#27272a" stroke-width="1"/>`
+            ).join('');
+
+            const axes = PROFILE_FEATURES.map((f, i) => {
+                const [x, y] = pt(i, 1);
+                const [lx, ly] = pt(i, 1.22);
+                return `<line x1="${cx}" y1="${cy}" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}" stroke="#27272a"/>
+                    <text x="${lx.toFixed(1)}" y="${ly.toFixed(1)}" text-anchor="middle" dominant-baseline="middle" fill="#71717a" font-size="11">${f.label}</text>`;
+            }).join('');
+
+            const shapes = entries.map(e => {
+                const vals = PROFILE_FEATURES.map(f => clamp01(Number(e.row[f.key]) || 0));
+                return `<polygon points="${pts(null, vals)}" fill="${e.color}" fill-opacity="0.12" stroke="${e.color}" stroke-width="2" stroke-linejoin="round"/>`;
+            }).join('');
+
+            document.getElementById('radarChart').innerHTML =
+                `<svg width="300" height="268" viewBox="0 0 300 268">${rings}${axes}${shapes}</svg>`;
+
+            document.getElementById('radarLegend').innerHTML = entries.map(e => `
+                <div class="flex items-center gap-2 text-sm">
+                    <span class="w-3 h-3 rounded-full flex-shrink-0" style="background:${e.color}"></span>
+                    <span class="truncate">${escapeHtml(cleanVariantId(e.model))}</span>
+                    ${e.isBase ? '<span class="text-[10px] uppercase tracking-wider text-amber-500 flex-shrink-0">base</span>' : ''}
+                </div>
+            `).join('');
+        }
+
+        function renderComparisonTable(entries) {
+            const base = entries[0];
+            const metrics = [
+                { label: 'MII Score', fmt: r => `<span class="font-bold gradient-text">${r.MII_Index != null ? r.MII_Index.toFixed(1) : '--'}</span>` },
+                { label: 'Profile Match', fmt: (r, e) => e.isBase ? '<span class="text-zinc-500">base</span>' : `<span class="text-emerald-400 font-medium">${Math.round(profileSimilarity(base.row, r) * 100)}%</span>` },
+                { label: 'Avg Price', fmt: r => r.price ? '$' + formatNumber(r.price) : '--' },
+                { label: 'Views', fmt: r => formatNumber(r.views_numeric) },
+                { label: 'Bids', fmt: r => r.bids != null ? formatNumber(r.bids) : '--' },
+                { label: 'Comments', fmt: r => r.comments != null ? formatNumber(r.comments) : '--' },
+                { label: 'Model Year', fmt: r => r.year ? Math.round(r.year) : '--' },
+                { label: 'Auctions', fmt: r => r.total_auctions || 1 },
+                { label: 'Data Period', fmt: r => `<span class="mono text-xs">${escapeHtml(String(r.quarter || '--'))}</span>` }
+            ];
+
+            const header = `
+                <tr class="border-b border-zinc-800">
+                    <th class="text-left px-5 py-3 text-xs text-zinc-500 uppercase tracking-wider font-medium">Metric</th>
+                    ${entries.map(e => `
+                        <th class="text-right px-5 py-3 min-w-[130px]">
+                            <div class="flex items-center justify-end gap-2">
+                                <span class="w-2 h-2 rounded-full" style="background:${e.color}"></span>
+                                <span class="text-sm font-semibold truncate max-w-[160px]">${escapeHtml(cleanVariantId(e.model))}</span>
+                            </div>
+                            <div class="text-xs text-zinc-500 font-normal">${escapeHtml(e.make)}</div>
+                        </th>
+                    `).join('')}
+                </tr>
+            `;
+
+            const rows = metrics.map(m => `
+                <tr class="border-b border-zinc-800/50 hover:bg-zinc-800/20">
+                    <td class="px-5 py-3 text-sm text-zinc-400">${m.label}</td>
+                    ${entries.map(e => `<td class="px-5 py-3 text-sm text-right">${m.fmt(e.row, e)}</td>`).join('')}
+                </tr>
+            `).join('');
+
+            document.getElementById('comparisonTable').innerHTML =
+                `<table class="w-full">${header}${rows}</table>`;
+        }
+
+        function renderTrendChart(entries) {
+            const container = document.getElementById('trendChart');
+            const quarters = [...availableQuarters].sort();
+            const values = [];
+            entries.forEach(e => e.rows.forEach(r => {
+                if (r.MII_Index != null) values.push(r.MII_Index);
+            }));
+
+            if (quarters.length < 2 || values.length === 0) {
+                container.innerHTML = '<div class="text-sm text-zinc-500 py-4">Not enough history to chart a trend yet</div>';
+                return;
+            }
+
+            const W = 640, H = 200, padL = 42, padR = 16, padT = 12, padB = 28;
+            const min = Math.min(...values), max = Math.max(...values);
+            const span = (max - min) || 1;
+            const x = i => padL + (i / (quarters.length - 1)) * (W - padL - padR);
+            const y = v => padT + (1 - (v - min) / span) * (H - padT - padB);
+
+            const gridLines = [min, (min + max) / 2, max].map(v => `
+                <line x1="${padL}" y1="${y(v).toFixed(1)}" x2="${W - padR}" y2="${y(v).toFixed(1)}" stroke="#27272a" stroke-dasharray="3,3"/>
+                <text x="${padL - 8}" y="${y(v).toFixed(1)}" text-anchor="end" dominant-baseline="middle" fill="#71717a" font-size="10">${v.toFixed(0)}</text>
+            `).join('');
+
+            const labelStep = Math.max(1, Math.ceil(quarters.length / 6));
+            const xLabels = quarters.map((q, i) => {
+                if (i % labelStep !== 0 && i !== quarters.length - 1) return '';
+                return `<text x="${x(i).toFixed(1)}" y="${H - 8}" text-anchor="middle" fill="#71717a" font-size="10">${escapeHtml(String(q))}</text>`;
+            }).join('');
+
+            const lines = entries.map(e => {
+                const points = [];
+                quarters.forEach((q, i) => {
+                    const row = e.rows.find(r => r.quarter === q);
+                    if (row && row.MII_Index != null) points.push({ x: x(i), y: y(row.MII_Index) });
+                });
+                if (points.length === 0) return '';
+                const polyline = points.length > 1
+                    ? `<polyline points="${points.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ')}" fill="none" stroke="${e.color}" stroke-width="2" stroke-linejoin="round"/>`
+                    : '';
+                const dots = points.map(p => `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="3" fill="${e.color}"/>`).join('');
+                return polyline + dots;
+            }).join('');
+
+            container.innerHTML = `<svg viewBox="0 0 ${W} ${H}" class="w-full">${gridLines}${xLabels}${lines}</svg>`;
+        }
+
+        function renderModelDropdown(query, resultsEl, action) {
+            const q = query.trim().toLowerCase();
+            if (q.length < 2) {
+                resultsEl.classList.add('hidden');
+                return;
+            }
+
+            const matches = [];
+            modelIndex.forEach(entry => {
+                if ((entry.make + ' ' + entry.model).toLowerCase().includes(q)) matches.push(entry);
+            });
+            matches.sort((a, b) => (getRowForQuarter(b).MII_Index || 0) - (getRowForQuarter(a).MII_Index || 0));
+            const top = matches.slice(0, 8);
+
+            resultsEl.innerHTML = top.length === 0
+                ? '<div class="px-4 py-3 text-sm text-zinc-500">No models found</div>'
+                : top.map(e => {
+                    const row = getRowForQuarter(e);
+                    return `
+                        <button data-model-action="${action}" data-key="${escapeAttr(e.key)}"
+                            class="w-full text-left px-4 py-2.5 hover:bg-zinc-700/50 flex items-center justify-between gap-3">
+                            <span class="min-w-0">
+                                <span class="block text-sm font-medium truncate">${escapeHtml(cleanVariantId(e.model))}</span>
+                                <span class="block text-xs text-zinc-500">${escapeHtml(e.make)}</span>
+                            </span>
+                            <span class="text-sm font-bold text-amber-500 flex-shrink-0">${row.MII_Index != null ? row.MII_Index.toFixed(1) : '--'}</span>
+                        </button>
+                    `;
+                }).join('');
+            resultsEl.classList.remove('hidden');
         }
 
         function exportData() {
@@ -749,11 +1239,50 @@
             currentQuarter = e.target.value;
             selectedMake = null;
             renderLeaderboard();
+            renderAnalytics();
         });
         document.getElementById('exportBtn').addEventListener('click', exportData);
         document.getElementById('clearCompareBtn').addEventListener('click', () => {
             compareList = [];
             renderLeaderboard();
+        });
+
+        // Analytics tab listeners
+        document.getElementById('tabBtnLeaderboard').addEventListener('click', () => setActiveTab('leaderboard'));
+        document.getElementById('tabBtnAnalytics').addEventListener('click', () => setActiveTab('analytics'));
+        document.getElementById('clearModelCompareBtn').addEventListener('click', () => {
+            comparedModelKeys = [];
+            renderAnalytics();
+        });
+        document.getElementById('baseModelSearch').addEventListener('input', (e) => {
+            renderModelDropdown(e.target.value, document.getElementById('baseModelResults'), 'setBase');
+        });
+        document.getElementById('addModelSearch').addEventListener('input', (e) => {
+            renderModelDropdown(e.target.value, document.getElementById('addModelResults'), 'add');
+        });
+
+        // Delegated clicks for model actions (search results, suggestions, leaderboard rows)
+        document.addEventListener('click', (e) => {
+            const actionEl = e.target.closest('[data-model-action]');
+            if (actionEl) {
+                e.stopPropagation();
+                const key = actionEl.dataset.key;
+                const action = actionEl.dataset.modelAction;
+                if (action === 'setBase') {
+                    document.getElementById('baseModelSearch').value = '';
+                    setBaseModel(key);
+                } else if (action === 'add') {
+                    document.getElementById('addModelSearch').value = '';
+                    addComparedModel(key);
+                } else if (action === 'remove') {
+                    removeComparedModel(key);
+                }
+            }
+            // Close search dropdowns when clicking elsewhere
+            ['baseModelResults', 'addModelResults'].forEach(id => {
+                const el = document.getElementById(id);
+                if (!el.contains(e.target) || actionEl) el.classList.add('hidden');
+            });
         });
 
         // ==========================================
